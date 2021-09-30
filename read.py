@@ -5,7 +5,7 @@ import pytesseract
 import cv2
 
 #initial variables
-receipts =['receipts/prueba1.jpg','receipts/prueba2.jpg','receipts/prueba3.jpg','receipts/prueba4.jpg','receipts/prueba5.jpg','receipts/prueba6.jpg']
+receipts =['receipts/prueba1.jpg','receipts/prueba2.jpg','receipts/prueba3.jpg','receipts/prueba4.jpg','receipts/prueba5.jpg','receipts/prueba6.jpg','receipts/prueba7.jpg']
 w = 4
 h = len(receipts)
 data = [[0 for x in range(w)] for y in range(h)] 
@@ -31,6 +31,10 @@ for j in range(0, len(receipts)):
 
     # loop over each of the individual text localizations
     for i in range(0, len(results["text"])):
+        x = results["left"][i]
+        y = results["top"][i]
+        w = results["width"][i]
+        h = results["height"][i]
        
         #Traduction of the text
         text = results["text"][i]
@@ -68,6 +72,18 @@ for j in range(0, len(receipts)):
             if(len(results["text"][i-1]) == 5  and  estimada and energyOut==0):
                 energy = word
                 energyOut =energyOut+1
+
+            # display the confidence and text to our terminal
+            print("Confidence: {}".format(conf))
+            print("Text: {}".format(text))
+            print("Len: {}".format(len(text)))
+            print("")
+            # strip out non-ASCII text so we can draw the text on the image
+            # using OpenCV, then draw a bounding box around the text along
+            # with the text itself
+            text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(image, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,1.2, (0, 0, 255), 3)
                 
         
     #fill the array 
@@ -87,3 +103,11 @@ with open('receipts_info.csv', 'w', encoding='UTF8', newline='') as f:
 
     # write multiple rows
     writer.writerows(data)
+
+
+print("Total:"+total)
+print("First Month:"+firstmonth)
+print("Second Month:"+secondmonth)
+print("Energy:"+energy)
+cv2.imshow("Image", image)
+cv2.waitKey(0)
