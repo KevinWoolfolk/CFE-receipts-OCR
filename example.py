@@ -6,6 +6,7 @@ import numpy as np
 import os
 import cv2
 import re
+import PySimpleGUI as sg
 
 
 per = 100
@@ -16,22 +17,15 @@ imgDomestic = cv2.imread('domestico.jpg')
 roi =  [
         [(499, 139), (719, 196), 'text', ' total'], 
         [(38, 257), (477, 304), 'text', ' servicio'], 
-       # [(497, 256), (796, 300), 'text', ' periodo'], 
         [(657, 261), (801, 301), 'text', ' periodo'],
         [(36, 307), (167, 356), 'text', ' tarifa'], 
         [(272, 319), (338, 357), 'text', ' medidor'], 
-        #[(346, 309), (500, 354), 'text', ' multiplicador'], 
         [(468, 317), (498, 349), 'text', ' multiplicador'],
-        #[(34, 357), (251, 405), 'text', ' carga'], 
         [(214, 370), (246, 405), 'text', ' carga'],
         [(452, 461), (511, 488), 'text', ' kwbase'],
-        #[(258, 361), (497, 404), 'text', ' contratada'],
         [(466, 370), (496, 403), 'text', ' contratada'],
         [(40, 466), (502, 675), 'text', ' tabla']
-       
     ]
-
-# [(35, 412), (511, 680), 'text', ' tabla']
 
 
 
@@ -41,7 +35,7 @@ kp1, des1 = orb.detectAndCompute(imgQ,None)
 kp3, des3 = orb.detectAndCompute(imgDomestic,None)
 #imgKp1 = cv2.drawKeypoints(imgQ,kp1,None)
 
-path = 'receipts'
+path = '/Users/kevinw/Documents/Tec de Monterrey/Ai/project/CFE-receipts-OCR/receipts'
 myPicList = os.listdir(path)
 
 w = 19
@@ -65,8 +59,17 @@ for j,y in enumerate(myPicList):
 
         M, _ = cv2.findHomography(srcPoints,dstPoints,cv2.RANSAC,5.0)
         imgScan = cv2.warpPerspective(img,M,(w,h))
-        imgScan = cv2.resize(imgScan,(w//3, h//3) )
-        cv2.imshow(y,imgScan)
+        
+
+        width = 825
+        height = 1275
+
+        # dsize
+        dsize = (width, height)
+
+        # resize image
+        img = cv2.resize(img, dsize)
+        cv2.imshow(y+"2",img)
 
         imgShow = img.copy()
         imgMask = np.zeros_like(imgShow)
@@ -174,12 +177,12 @@ for j,y in enumerate(myPicList):
                             arraryPositionBase = arraryPositionBase +1
                         if(text =='KVArh' or text == 'kVArh' or text == 'KVAth'):
                             kVArh = results["text"][i]
-                        if(KWMax5 =='KWMax' or text == 'kWMax'):
+                        if(KWMax5 =='KWM' or KWMax5 =='kWM' or text == 'kWMax'):
                             KWMax = results["text"][i]
 
 
                     text = results["text"][i]
-                    KWMax5 = text[:5]
+                    KWMax5 = text[:3]
                     texto = results["text"][i-1]
 
                         
@@ -262,7 +265,10 @@ with open('cfe_info.csv', 'w', encoding='UTF8', newline='') as f:
     # write multiple rows
     writer.writerows(dataExcel)
 
+
+print(dataExcel)
 print('Done')
 #cv2.imshow('KeyPoints',imgKp1)
 #cv2.imshow('Output',imgQ)
 cv2.waitKey(0)
+

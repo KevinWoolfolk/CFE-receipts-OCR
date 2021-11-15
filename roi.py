@@ -25,7 +25,7 @@ def mousePoints(event,x,y,flags,params):
         circles.append([x,y,myColor])
         counter2 += 1
 
-img = cv2.imread('receipts/recibo1.jpg')
+img = cv2.imread('empresarial.jpg')
 
 while True:
     for x,y,color in circles:
