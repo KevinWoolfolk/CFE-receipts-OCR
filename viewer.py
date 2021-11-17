@@ -1,9 +1,11 @@
 # img_viewer.py
+import csv
 from pytesseract import Output
 import numpy as np
 import os
 import cv2
 from enum import auto
+from pdf2image import convert_from_path
 import PySimpleGUI as sg
 import os.path
 import matplotlib.pyplot as plt 
@@ -123,7 +125,7 @@ while True:
             f
             for f in file_list
                 if os.path.isfile(os.path.join(folder, f))
-                and f.lower().endswith((".jpg",".png", ".gif"))
+                and f.lower().endswith((".jpg",".png", ".pdf"))
                 
         ]
         recibos = [
@@ -158,10 +160,29 @@ while True:
             w = 22
             h = len(recibos)
             dataExcel = [[0 for x in range(w)] for y in range(h)] 
-
+            
             for i in range(len(recibos)):
+                confidencia = 0
                 img = cv2.imread(folder + '/'+recibos[i])
+
                 print(folder + '/'+recibos[i])
+
+                #convierte pdf a jpg
+                if recibos[i].lower().endswith((".pdf")):
+                    pages = convert_from_path(folder + '/'+recibos[i])
+                    count = 0
+                    for page in pages:
+                        if(count == 0):
+                            page.save('output.jpeg', 'JPEG')
+                        count +=1
+                    img = cv2.imread('output.jpeg')
+
+                    
+                        
+
+
+
+                
                 # resize image
                 width = 825
                 height = 1275
@@ -239,6 +260,7 @@ while True:
                                 #Obtener SERBICIO
                                 if(text == 'SERVICIO:'):
                                     servicio = results["text"][j]
+                                    confidencia = confidencia +conf
                                 #Obtener RMU
                                 else:
                                     rmu+=str(results["text"][j] + ' ')
@@ -246,6 +268,7 @@ while True:
                                     
                             #Dato del peridoo
                             if(r[3] ==' periodo'):
+                                confidencia = confidencia +conf
                                 periodo +=str(results["text"][j])
                                 
                             #Tabla datos
@@ -255,47 +278,77 @@ while True:
                                 
                                 if(text == 'intermedia' and arraryPositionIntermedio == 1):
                                     kWIntermedio = results["text"][j]
+                                    confidencia = confidencia +conf
                                     arraryPositionIntermedio =  arraryPositionIntermedio+1
                                 if(text == 'intermedia' and arraryPositionIntermedio == 0):
                                     kWhIntermedio = results["text"][j]
+                                    confidencia = confidencia +conf
                                     arraryPositionIntermedio =  arraryPositionIntermedio +1
                                 if(text == 'punta' and arraryPositionPunta == 1):
+                                    confidencia = confidencia +conf
                                     kWPunta= results["text"][j]
                                     arraryPositionPunta =  arraryPositionPunta +1
                                 if(text == 'punta' and arraryPositionPunta == 0):
+                                    confidencia = confidencia +conf
                                     kWhPunta = results["text"][j]
                                     arraryPositionPunta = arraryPositionPunta +1
                                 if(text == 'base' and arraryPositionBase == 1):
+                                    confidencia = confidencia +conf
                                     kWBase= results["text"][j]
                                     arraryPositionBase =  arraryPositionBase +1
                                 if(text == 'base' and arraryPositionBase == 0):
+                                    confidencia = confidencia +conf
                                     kWhBase = results["text"][j]
                                     arraryPositionBase = arraryPositionBase +1
                                 if(text =='KVArh' or text == 'kVArh' or text == 'KVAth'):
+                                    confidencia = confidencia +conf
                                     kVArh = results["text"][j]
                                 if(KWMax5 =='KWM' or KWMax5 =='kWM' or text == 'kWMax'):
+                                    confidencia = confidencia +conf
                                     KWMax = results["text"][j]
 
 
                             text = results["text"][j]
+                            conf = int(results["conf"][j])
                             KWMax5 = text[:3]
                             texto = results["text"][j-1]
 
                         #Obtener TOTAL
                         if(r[3] ==' total'):
                             total = text
+                            totalconf = conf
+                            confidencia = confidencia +conf
+                            print(totalconf)
                         elif(r[3] ==' medidor'):
                             medidor = text
+                            totalmedidor = conf
+                            confidencia = confidencia +conf
+                            print(totalmedidor)
                         elif(r[3] ==' multiplicador'):
                             multiplicador = text
+                            totalmultiplicador = conf
+                            confidencia = confidencia +conf
+                            print(totalmultiplicador)
                         elif(r[3] ==' tarifa'):
                             tarifa = text
+                            totaltarifa = conf
+                            confidencia = confidencia +conf
+                            print(totaltarifa)
                         elif(r[3] ==' carga'):
                             carga = text
+                            totalcarga = conf
+                            confidencia = confidencia +conf
+                            print(totalcarga)
                         elif(r[3] ==' contratada'):
                             contratada = text
+                            totalcontratada = conf
+                            confidencia = confidencia +conf
+                            print(totalcontratada)
                         elif(r[3] ==' kwbase'):
                             kWhBase = text
+                            totalbase = conf
+                            confidencia = confidencia +conf
+                            print(totalbase)
             
                 periodoFecha = ''
                 periodoArray = []
@@ -356,8 +409,6 @@ while True:
             
             
             uniqueSeries = unique(series)
-
-            print(uniqueSeries)
             uniqueSeries.reverse()
 
             for i in range(len(uniqueSeries)):
@@ -395,5 +446,17 @@ while True:
             window.extend_layout(window['principal'], informacion(len(uniqueSeries),len(dataExcel)))
             break
 
+#Create csv with the data of the receipts
+header = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
+'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica','Tipo de recibo']
+
+with open('recibos_cfe.csv', 'w', encoding='UTF8', newline='') as f:
+    writer = csv.writer(f)
+    # write the header
+    writer.writerow(header)
+
+    # write multiple rows
+    writer.writerows(dataExcel)
+    
 window.close()    
 plt.show()
