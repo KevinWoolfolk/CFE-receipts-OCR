@@ -1,4 +1,4 @@
-# img_viewer.py
+# libraries
 import csv
 from cv2 import data
 from pytesseract import Output
@@ -16,13 +16,9 @@ from re import sub
 import pytesseract
 import pandas as pd
 
-
-
-per = 100
-imgQ = cv2.imread('empresarial.jpg')
+#Array creations
+recibos = []
 columnNames = []
-
-
 roi =  [
         [(499, 139), (719, 196), 'text', ' total'], 
         [(38, 257), (477, 304), 'text', ' servicio'], 
@@ -35,22 +31,9 @@ roi =  [
         [(466, 370), (496, 403), 'text', ' contratada'],
         [(40, 466), (502, 675), 'text', ' tabla']
     ]
-
-
-orb = cv2.ORB_create(5000)
-kp1, des1 = orb.detectAndCompute(imgQ,None)
-#imgKp1 = cv2.drawKeypoints(imgQ,kp1,None)
-
-
-
 months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
-recibos = []
 
-
-
-
-
-#Obtener variables unicas de arreglo
+#function to get unique values of list
 def unique(list1):
     unique_list = []
     for x in list1:
@@ -59,7 +42,7 @@ def unique(list1):
     
     return unique_list
 
-#Funcion para poner label dentro de las graficas de barras
+#Function to put labels on the bar graph
 def autolabel(plot,label,ax):
     for idx,rect in enumerate(plot):
         height = rect.get_height()
@@ -67,6 +50,7 @@ def autolabel(plot,label,ax):
                 label[idx],
                 ha='center', va='bottom', rotation=90)
 
+#function to display information when ocr was finished
 def informacion(empresas,recibos):
     return [
                 [
@@ -80,7 +64,7 @@ def informacion(empresas,recibos):
                 ],
             ]
 
-#Primera estructura de GUI
+#Gui structure
 file_list_column = [
     [
         sg.Text("Seleccionar carpeta"),
@@ -99,7 +83,7 @@ file_list_column = [
 ]
 
 
-#Layout para iniciar GUI
+#GUI layout call
 layout = [
     [
         sg.Column(file_list_column,element_justification='center',key = 'principal'),
@@ -108,7 +92,7 @@ layout = [
 window = sg.Window("Recibos cfe", layout)
 
 
-#Correr interfaz de GUI
+#Run GUI window
 while True:
     event, values = window.read()
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -136,26 +120,14 @@ while True:
                 and f.lower().endswith((".jpg",".png", ".pdf"))
                 
         ]
-        
         window["-FILE LIST-"].update(fnames)
-    elif event == "-FILE LIST-":  # A file was chosen from the listbox
-        try:
-            filename = os.path.join(
-                values["-FOLDER-"], values["-FILE LIST-"][0]
-            )
-            window["-TOUT-"].update(filename)
-            window["-IMAGE-"].update(filename=filename)
 
-        except:
-            pass
-
-
-
+    #start ocr when button is press
     if event == "procesar":
         names = []
         rango = []
         series = []
-
+        #it has to be at least one file to start
         if(len(recibos)!=0):
             #create data array
             w = 22
@@ -164,6 +136,7 @@ while True:
             dataConf = [[0 for x in range(18)] for y in range(h)] 
             dataConfInvert = [[0 for x in range(h)] for y in range(18)] 
             
+            #iterate into the files
             for i in range(len(recibos)):
                 confidencia = 0
                 img = cv2.imread(folder + '/'+recibos[i])
@@ -171,7 +144,7 @@ while True:
 
                 print(folder + '/'+recibos[i])
 
-                #convierte pdf a jpg
+                #if pdf found convert to image
                 if recibos[i].lower().endswith((".pdf")):
                     pages = convert_from_path(folder + '/'+recibos[i])
                     count = 0
@@ -190,7 +163,7 @@ while True:
                 imgShow = img.copy()
                 imgMask = np.zeros_like(imgShow)
 
-                #Resetear variables
+                #start variable for file
                 total = ''
                 servicio = ''
                 rmu = ''
@@ -210,7 +183,6 @@ while True:
                 kVArh = ''
                 factorPotencia = ''  
 
-                
                 #Confidence variables
                 totalconf = 0
                 servicioconf = 0
@@ -234,36 +206,43 @@ while True:
                 arraryPositionBase = 0
                 arraryPositionIntermedio = 0
                 arraryPositionPunta = 0
+
+                #iteration with the crop images with roi(region of interest)
                 for x,r in enumerate(roi):
+                    #crop image
                     cv2.rectangle(imgMask,((r[0][0]),r[0][1]), ((r[1][0]),r[1][1]), (0,255,0),cv2.FILLED)
                     imgShow = cv2.addWeighted(imgShow,0.99,imgMask,0.1,0)
                     imgCrop = img[r[0][1]: r[1][1], r[0][0]: r[1][0]]
-                    img_grey = cv2.cvtColor(imgCrop, cv2.COLOR_BGR2GRAY)
-                    th3 = cv2.adaptiveThreshold(img_grey, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 21, 10)
-                    filter = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-                    # Applying cv2.filter2D function on our Logo image
-                    sharpen_img_2=cv2.filter2D(imgCrop,-1,filter)
 
+                    #filter image
+                    img_grey = cv2.cvtColor(imgCrop, cv2.COLOR_BGR2GRAY)
+                    filter = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+                    sharpen_img_2=cv2.filter2D(imgCrop,-1,filter)
                     filter = np.array([[0.272, 0.534, 0.131],
                         [0.349, 0.686, 0.168],
                         [0.393, 0.769, 0.189]])
+
                     # Applying cv2.transform function
                     sepia_img=cv2.transform(imgCrop,filter)
 
+
+                    #resize image depending on the crop image that we are looking
                     if(r[3] ==' tabla'):
                         sepia_img = cv2.resize(sepia_img,(600,300))
                     elif(r[3] ==' medidor' or r[3] == ' kwbase'):
                         sepia_img = cv2.resize(sepia_img,(200,150))
                     elif(r[3] ==' carga' or r[3] ==' periodo'  or r[3] ==' contratada' or r[3] ==' multiplicador' ):
                         sepia_img = cv2.resize(sepia_img,(150,150))
-                        
                     else:
                         sepia_img = cv2.resize(sepia_img,(600,150))
 
                     rgb = cv2.cvtColor(imgCrop, cv2.COLOR_BGR2RGB)
                     cv2.imshow(str(x),sepia_img)
 
+
+                    #search into the text roi attributes
                     if(r[2] == 'text'):
+                        #use pytesseract function image_to_date that it based in LSTM
                         if(r[3] ==' medidor'):
                             results = pytesseract.image_to_data(sepia_img, output_type=Output.DICT)
                         elif(r[3] ==' servicio' or r[3] ==' periodo' ):
@@ -272,27 +251,22 @@ while True:
                             results = pytesseract.image_to_data(sepia_img, lang='eng',config='--psm 12 --oem 3 \ -c tessedit_char_whitelist=0123456789', output_type=Output.DICT)
                         else:
                             results = pytesseract.image_to_data(sepia_img, output_type=Output.DICT)
-                        #  pytesseract.image_to_data(Image.open(tempFile), lang='eng', config='--psm 11', output_type=Output.DICT) 
                         
+                        #iterate through the array of string on the crop image
                         for j in range(0, len(results["text"])):
-                            
                             if(r[3] ==' servicio'):
-                                #Obtener SERBICIO
                                 if(text == 'SERVICIO:'):
                                     servicio = results["text"][j]
                                     servicioconf = conf
-                                #Obtener RMU
                                 else:
                                     rmuconf = conf
                                     rmu+=str(results["text"][j] + ' ')
                                         
-                                    
-                            #Dato del peridoo
+                            
                             if(r[3] ==' periodo'):
                                 periodoconf = conf
                                 periodo +=str(results["text"][j])
                                 
-                            #Tabla datos
                             if(r[3] == ' tabla'):
                                 ultimoDato = results["text"][j]
                                 ultimoConf = results["conf"][j]
@@ -336,8 +310,8 @@ while True:
                             conf = int(results["conf"][j])
                             KWMax5 = text[:3]
                             texto = results["text"][j-1]
-
-                        #Obtener TOTAL
+                        
+                        #variables that only receive a string on their crop image
                         if(r[3] ==' total'):
                             total = text
                             totalconf = conf
@@ -361,6 +335,7 @@ while True:
                             kWhBase = text
                             kWhBaseconf = conf
             
+                #proccess some attributes that have different scenarios
                 periodoFecha = ''
                 periodoArray = []
                 periodoArray = str.split(periodo)
@@ -380,8 +355,9 @@ while True:
                         newRmu += str(rmu[k])
 
                 if(kVArh == ultimoDato):
-                    ultimoDato = 'No Existe'
+                    ultimoDato = 0
 
+                #assign the ocr outputs to the array
                 dataExcel[i][0] = total
                 dataExcel[i][1] = servicio
                 dataExcel[i][2] = newRmu
@@ -402,6 +378,7 @@ while True:
                 dataExcel[i][17] = ultimoDato
                 dataExcel[i][18] = 'Empresarial'
 
+                #assign the ocr outputs confidence to the array
                 dataConf[i][0] = totalconf
                 dataConf[i][1] = servicioconf
                 dataConf[i][2] = rmuconf
@@ -421,7 +398,9 @@ while True:
                 dataConf[i][16] = kVArhconf
                 dataConf[i][17] = ultimoConf
 
-            
+            #finish files OCR
+
+            #Get total from money format to decimal and get month number
             for i in range(len(dataExcel)):
                 graph_value = int(dataExcel[i][13])
                 stringFecha = (dataExcel[i][3])
@@ -434,18 +413,21 @@ while True:
                         dataExcel[i][19] = j+1
                 dataExcel[i][20] = stringFecha[5:7]
             
+            #sort array through month and then trough year
             dataExcel= sorted(dataExcel, key=itemgetter(19))
             dataExcel= sorted(dataExcel, key=itemgetter(20))
             
-            
+            #call unique method
             uniqueSeries = unique(series)
             uniqueSeries.reverse()
 
+            #iterate the different clients that are on the receipts so we dont just show one graphic to show all the result
             for i in range(len(uniqueSeries)):
                 names_p = []
                 rango_p = []
                 total_p = []
                 label_p = []
+                dataFactorPotencia = [[0 for x in range(len(months))] for y in range(len(dataExcel))] 
 
                 for j in range(len(dataExcel)):
                     stringFecha = (dataExcel[j][3])
@@ -453,12 +435,22 @@ while True:
                     firstYear1 = (stringFecha[5:7])
                     secondMonth1 =(stringFecha[10:13])
                     secondYear1 =(stringFecha[13:15])
+
+                    for k in range(len(months)):
+                            if(firstMonth1 == months[k]):
+                                dataFactorPotencia[j][k] =  float(dataExcel[j][17])
+                            elif(secondMonth1 == months[k]):
+                                dataFactorPotencia[j][k] =  float(dataExcel[j][17])
+                            else:
+                                dataFactorPotencia[j][k] = 0
+                    
                     if(uniqueSeries[i] == dataExcel[j][1]):
                         names_p.append(firstMonth1+firstYear1+'-'+secondMonth1+secondYear1)
                         rango_p.append(int(dataExcel[j][13]))
                         total_p.append(dataExcel[j][21])
                         label_p.append(dataExcel[j][0])
-                
+
+                #create client electricity graphic
                 f1 = plt.figure()
                 ax1= f1.add_subplot(111)
                 bar_plot = ax1.bar(names_p,rango_p)    
@@ -466,6 +458,7 @@ while True:
                 ax1.set_title(' Grafica de consumo electrico | Serie: '+ uniqueSeries[i])
                 ax1.tick_params(axis='x', which='major', labelsize=10,rotation = 45)
 
+                #create client total graphic
                 f2 = plt.figure()
                 ax2= f2.add_subplot(111)
                 bar_plot2 = ax2.bar(names_p,total_p)
@@ -477,22 +470,22 @@ while True:
             break
 
 
-
-#Create csv with the data of the receipts
 header = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
 'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica','Tipo de recibo']
 headerConf = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
 'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica']
 
+#switch array data
 for i in range(18):
     for j in range(len(recibos)):
         dataConfInvert[i][j] = dataConf[j][i]
 
-
+#display pytesseract confidence
 df = pd.DataFrame(dataConfInvert,columns = columnNames, index=headerConf)
 df.plot.bar()
 plt.title('Pytesseract Confidence')
 
+#Create csv with the data of the receipts
 
 with open('recibos_cfe.csv', 'w', encoding='UTF8', newline='') as f:
     writer = csv.writer(f)
