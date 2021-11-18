@@ -1,5 +1,6 @@
 # img_viewer.py
 import csv
+from cv2 import data
 from pytesseract import Output
 import numpy as np
 import os
@@ -12,14 +13,15 @@ import matplotlib.pyplot as plt
 from operator import itemgetter
 from decimal import Decimal
 from re import sub
-
 import pytesseract
+import pandas as pd
 
 
 
 per = 100
 imgQ = cv2.imread('empresarial.jpg')
 imgDomestic = cv2.imread('domestico.jpg')
+columnNames = []
 
 
 roi =  [
@@ -160,10 +162,13 @@ while True:
             w = 22
             h = len(recibos)
             dataExcel = [[0 for x in range(w)] for y in range(h)] 
+            dataConf = [[0 for x in range(18)] for y in range(h)] 
+            dataConfInvert = [[0 for x in range(h)] for y in range(18)] 
             
             for i in range(len(recibos)):
                 confidencia = 0
                 img = cv2.imread(folder + '/'+recibos[i])
+                columnNames.append(recibos[i])
 
                 print(folder + '/'+recibos[i])
 
@@ -176,12 +181,6 @@ while True:
                             page.save('output.jpeg', 'JPEG')
                         count +=1
                     img = cv2.imread('output.jpeg')
-
-                    
-                        
-
-
-
                 
                 # resize image
                 width = 825
@@ -210,7 +209,29 @@ while True:
                 kWPunta = ''
                 KWMax = ''
                 kVArh = ''
-                factorPotencia = ''        
+                factorPotencia = ''  
+
+                
+                #Confidence variables
+                totalconf = 0
+                servicioconf = 0
+                rmuconf = 0
+                periodoconf = 0
+                tarifaconf = 0
+                medidorconf = 0
+                multiplicadorconf = 0
+                cargaconf = 0
+                contratadaconf = 0
+                kWhBaseconf = 0
+                kWhIntermedioconf = 0
+                kWhPuntaconf = 0
+                kWBaseconf = 0
+                kWIntermedioconf = 0
+                kWPuntaconf = 0
+                KWMaxconf = 0
+                kVArhconf = 0
+                factorPotenciaconf = 0    
+
                 arraryPositionBase = 0
                 arraryPositionIntermedio = 0
                 arraryPositionPunta = 0
@@ -260,52 +281,56 @@ while True:
                                 #Obtener SERBICIO
                                 if(text == 'SERVICIO:'):
                                     servicio = results["text"][j]
-                                    confidencia = confidencia +conf
+                                    servicioconf = conf
                                 #Obtener RMU
                                 else:
+                                    rmuconf = conf
                                     rmu+=str(results["text"][j] + ' ')
                                         
                                     
                             #Dato del peridoo
                             if(r[3] ==' periodo'):
-                                confidencia = confidencia +conf
+                                periodoconf = conf
                                 periodo +=str(results["text"][j])
                                 
                             #Tabla datos
                             if(r[3] == ' tabla'):
                                 ultimoDato = results["text"][j]
+                                ultimoConf = results["conf"][j]
 
                                 
                                 if(text == 'intermedia' and arraryPositionIntermedio == 1):
                                     kWIntermedio = results["text"][j]
-                                    confidencia = confidencia +conf
+                                    kWIntermedioconf = conf
                                     arraryPositionIntermedio =  arraryPositionIntermedio+1
                                 if(text == 'intermedia' and arraryPositionIntermedio == 0):
                                     kWhIntermedio = results["text"][j]
-                                    confidencia = confidencia +conf
+                                    kWhIntermedioconf = conf
                                     arraryPositionIntermedio =  arraryPositionIntermedio +1
                                 if(text == 'punta' and arraryPositionPunta == 1):
-                                    confidencia = confidencia +conf
                                     kWPunta= results["text"][j]
+                                    kWPuntaconf = conf
                                     arraryPositionPunta =  arraryPositionPunta +1
                                 if(text == 'punta' and arraryPositionPunta == 0):
-                                    confidencia = confidencia +conf
                                     kWhPunta = results["text"][j]
+                                    kWhPuntaconf = conf
                                     arraryPositionPunta = arraryPositionPunta +1
                                 if(text == 'base' and arraryPositionBase == 1):
                                     confidencia = confidencia +conf
                                     kWBase= results["text"][j]
+                                    kWBaseconf = conf
                                     arraryPositionBase =  arraryPositionBase +1
                                 if(text == 'base' and arraryPositionBase == 0):
-                                    confidencia = confidencia +conf
                                     kWhBase = results["text"][j]
+                                    kWhBase = conf
                                     arraryPositionBase = arraryPositionBase +1
                                 if(text =='KVArh' or text == 'kVArh' or text == 'KVAth'):
-                                    confidencia = confidencia +conf
                                     kVArh = results["text"][j]
+                                    kVArhconf = conf
                                 if(KWMax5 =='KWM' or KWMax5 =='kWM' or text == 'kWMax'):
                                     confidencia = confidencia +conf
                                     KWMax = results["text"][j]
+                                    KWMaxconf = conf
 
 
                             text = results["text"][j]
@@ -318,37 +343,24 @@ while True:
                             total = text
                             totalconf = conf
                             confidencia = confidencia +conf
-                            print(totalconf)
                         elif(r[3] ==' medidor'):
                             medidor = text
-                            totalmedidor = conf
-                            confidencia = confidencia +conf
-                            print(totalmedidor)
+                            medidorconf = conf
                         elif(r[3] ==' multiplicador'):
                             multiplicador = text
-                            totalmultiplicador = conf
-                            confidencia = confidencia +conf
-                            print(totalmultiplicador)
+                            multiplicadorconf = conf
                         elif(r[3] ==' tarifa'):
                             tarifa = text
-                            totaltarifa = conf
-                            confidencia = confidencia +conf
-                            print(totaltarifa)
+                            tarifaconf = conf
                         elif(r[3] ==' carga'):
                             carga = text
-                            totalcarga = conf
-                            confidencia = confidencia +conf
-                            print(totalcarga)
+                            cargaconf = conf
                         elif(r[3] ==' contratada'):
                             contratada = text
-                            totalcontratada = conf
-                            confidencia = confidencia +conf
-                            print(totalcontratada)
+                            contratadaconf = conf
                         elif(r[3] ==' kwbase'):
                             kWhBase = text
-                            totalbase = conf
-                            confidencia = confidencia +conf
-                            print(totalbase)
+                            kWhBaseconf = conf
             
                 periodoFecha = ''
                 periodoArray = []
@@ -390,6 +402,25 @@ while True:
                 dataExcel[i][16] = kVArh
                 dataExcel[i][17] = ultimoDato
                 dataExcel[i][18] = 'Empresarial'
+
+                dataConf[i][0] = totalconf
+                dataConf[i][1] = servicioconf
+                dataConf[i][2] = rmuconf
+                dataConf[i][3] = periodoconf
+                dataConf[i][4] = tarifaconf
+                dataConf[i][5] = medidorconf
+                dataConf[i][6] = multiplicadorconf
+                dataConf[i][7] = cargaconf
+                dataConf[i][8] = contratadaconf
+                dataConf[i][9] = 0
+                dataConf[i][10] = kWhIntermedioconf
+                dataConf[i][11] = kWhPuntaconf
+                dataConf[i][12] = kWhBaseconf
+                dataConf[i][13] = kWIntermedioconf
+                dataConf[i][14] = kWPuntaconf
+                dataConf[i][15] = KWMaxconf
+                dataConf[i][16] = kVArhconf
+                dataConf[i][17] = ultimoConf
 
             
             for i in range(len(dataExcel)):
@@ -446,9 +477,23 @@ while True:
             window.extend_layout(window['principal'], informacion(len(uniqueSeries),len(dataExcel)))
             break
 
+
+
 #Create csv with the data of the receipts
 header = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
 'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica','Tipo de recibo']
+headerConf = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
+'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica']
+
+for i in range(18):
+    for j in range(len(recibos)):
+        dataConfInvert[i][j] = dataConf[j][i]
+
+
+df = pd.DataFrame(dataConfInvert,columns = columnNames, index=headerConf)
+df.plot.bar()
+plt.title('Pytesseract Confidence')
+
 
 with open('recibos_cfe.csv', 'w', encoding='UTF8', newline='') as f:
     writer = csv.writer(f)
