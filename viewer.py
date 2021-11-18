@@ -20,7 +20,6 @@ import pandas as pd
 
 per = 100
 imgQ = cv2.imread('empresarial.jpg')
-imgDomestic = cv2.imread('domestico.jpg')
 columnNames = []
 
 
