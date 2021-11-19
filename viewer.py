@@ -15,6 +15,7 @@ from decimal import Decimal
 from re import sub
 import pytesseract
 import pandas as pd
+from math import pi
 
 #Array creations
 recibos = []
@@ -32,6 +33,95 @@ roi =  [
         [(40, 466), (502, 675), 'text', ' tabla']
     ]
 months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
+
+#Make radar function
+def radarGraphic(list1,headers):
+    listene = []
+    listfeb = []
+    listmar = []
+    listabr = []
+    listmay = []
+    listjun = []
+    listjul = []
+    listago = []
+    listsep = []
+    listoct = []
+    listnov = []
+    listdic = []
+
+    for i in range(len(list1)):
+        listene.append(list1[i][0])
+        listfeb.append(list1[i][1])
+        listmar.append(list1[i][2])
+        listabr.append(list1[i][3])
+        listmay.append(list1[i][4])
+        listjun.append(list1[i][5])
+        listjul.append(list1[i][6])
+        listago.append(list1[i][7])
+        listsep.append(list1[i][8])
+        listoct.append(list1[i][9])
+        listnov.append(list1[i][10])
+        listdic.append(list1[i][11])
+
+    
+    # Set data
+    df = pd.DataFrame({
+    'group': headers,
+    'ENE': listene,
+    'FEB': listfeb,
+    'MAR': listmar,
+    'ABR': listabr,
+    'MAY': listmay,
+    'JUN': listjun,
+    'JUL': listjul,
+    'AGO': listago,
+    'SEP': listsep,
+    'OCT': listoct,
+    'NOV': listnov,
+    'DIC': listdic
+    })
+    
+    # ------- PART 1: Create background
+    
+    # number of variable
+    categories=list(df)[1:]
+    N = len(categories)
+    
+    # What will be the angle of each axis in the plot? (we divide the plot / number of variable)
+    angles = [n / float(N) * 2 * pi for n in range(N)]
+    angles += angles[:1]
+    
+    # Initialise the spider plot
+    ax = plt.subplot(111, polar=True)
+    
+    # If you want the first axis to be on top:
+    ax.set_theta_offset(pi / 2)
+    ax.set_theta_direction(-1)
+    
+    # Draw one axe per variable + add labels
+    plt.xticks(angles[:-1], categories)
+    
+    # Draw ylabels
+    ax.set_rlabel_position(0)
+    plt.yticks([25,50,75,100], ["25","50","75","100"], color="grey", size=7)
+    plt.ylim(0,100)
+    
+
+    # ------- PART 2: Add plots
+    
+    # Plot each individual = each line of the data
+    # I don't make a loop, because plotting more than 3 groups makes the chart unreadable
+    
+    # Ind1
+    for i in range(len(headers)):
+        values=df.loc[i].drop('group').values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=headers[i])
+        ax.fill(angles, values, 'b', alpha=0.1)
+    
+    # Add legend
+    plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+    plt.title('Grafica de radar de factor potencia')
 
 #function to get unique values of list
 def unique(list1):
@@ -135,6 +225,7 @@ while True:
             dataExcel = [[0 for x in range(w)] for y in range(h)] 
             dataConf = [[0 for x in range(18)] for y in range(h)] 
             dataConfInvert = [[0 for x in range(h)] for y in range(18)] 
+            dataFactorPotencia = [[0 for x in range(len(months))] for y in range(len(dataExcel))] 
             
             #iterate into the files
             for i in range(len(recibos)):
@@ -376,7 +467,7 @@ while True:
                 dataExcel[i][15] = KWMax
                 dataExcel[i][16] = kVArh
                 dataExcel[i][17] = ultimoDato
-                dataExcel[i][18] = 'Empresarial'
+                dataExcel[i][18] = 's'
 
                 #assign the ocr outputs confidence to the array
                 dataConf[i][0] = totalconf
@@ -407,6 +498,17 @@ while True:
                 value = Decimal(sub(r'[^\d.]', '', dataExcel[i][0]))
                 dataExcel[i][21] = value
                 series.append(dataExcel[i][1])
+                firstMonth1 = (stringFecha[2:5])
+                secondMonth1 =(stringFecha[10:13])
+
+                for k in range(len(months)):
+                    if(firstMonth1 == months[k]):
+                        dataFactorPotencia[i][k] =  float(dataExcel[i][17])
+                        
+                    elif(secondMonth1 == months[k]):
+                        dataFactorPotencia[i][k] =  float(dataExcel[i][17])
+                    else:
+                        dataFactorPotencia[i][k] = 0
 
                 for j in range(len(months)):
                     if(months[j] == stringFecha[2:5]):
@@ -427,7 +529,6 @@ while True:
                 rango_p = []
                 total_p = []
                 label_p = []
-                dataFactorPotencia = [[0 for x in range(len(months))] for y in range(len(dataExcel))] 
 
                 for j in range(len(dataExcel)):
                     stringFecha = (dataExcel[j][3])
@@ -435,15 +536,6 @@ while True:
                     firstYear1 = (stringFecha[5:7])
                     secondMonth1 =(stringFecha[10:13])
                     secondYear1 =(stringFecha[13:15])
-
-                    for k in range(len(months)):
-                            if(firstMonth1 == months[k]):
-                                dataFactorPotencia[j][k] =  float(dataExcel[j][17])
-                            elif(secondMonth1 == months[k]):
-                                dataFactorPotencia[j][k] =  float(dataExcel[j][17])
-                            else:
-                                dataFactorPotencia[j][k] = 0
-                    
                     if(uniqueSeries[i] == dataExcel[j][1]):
                         names_p.append(firstMonth1+firstYear1+'-'+secondMonth1+secondYear1)
                         rango_p.append(int(dataExcel[j][13]))
@@ -466,6 +558,10 @@ while True:
                 ax2.set_title(' Grafica de total | Serie: '+ uniqueSeries[i])
                 ax2.tick_params(axis='x', which='major', labelsize=10,rotation = 45)
 
+                
+                
+                
+
             window.extend_layout(window['principal'], informacion(len(uniqueSeries),len(dataExcel)))
             break
 
@@ -474,6 +570,8 @@ header = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
 'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica','Tipo de recibo']
 headerConf = ['Total','Servicio','Rmu','Periodo','Tarifa','Medidor','Multiplicador',
 'Carga','Contratada','kWhBase','kWhIntermedia','kWhPunta','kWBase','kWIntermedia','kWPunta','KWMax','KVArh','FactorPotenica']
+
+
 
 #switch array data
 for i in range(18):
@@ -495,5 +593,10 @@ with open('recibos_cfe.csv', 'w', encoding='UTF8', newline='') as f:
     # write multiple rows
     writer.writerows(dataExcel)
     
+#create client total graphic
+f3 = plt.figure()
+ax3= f3.add_subplot(111)
+bar_plot3 = ax3.bar(names_p,total_p)
+radarGraphic(dataFactorPotencia,columnNames)
 window.close()    
 plt.show()
