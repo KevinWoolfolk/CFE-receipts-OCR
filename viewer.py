@@ -526,9 +526,13 @@ while True:
             #iterate the different clients that are on the receipts so we dont just show one graphic to show all the result
             for i in range(len(uniqueSeries)):
                 names_p = []
+                names_bar_p= []
                 rango_p = []
                 total_p = []
                 label_p = []
+                cont = 0
+                contInterno = 0
+                
 
                 for j in range(len(dataExcel)):
                     stringFecha = (dataExcel[j][3])
@@ -537,10 +541,33 @@ while True:
                     secondMonth1 =(stringFecha[10:13])
                     secondYear1 =(stringFecha[13:15])
                     if(uniqueSeries[i] == dataExcel[j][1]):
+                        cont = cont+1
                         names_p.append(firstMonth1+firstYear1+'-'+secondMonth1+secondYear1)
                         rango_p.append(int(dataExcel[j][13]))
                         total_p.append(dataExcel[j][21])
                         label_p.append(dataExcel[j][0])
+
+                
+                dataEnergy = [[0 for x in range(3)] for y in range(cont)] 
+                dataEnergyInvert = [[0 for x in range(cont)] for y in range(3)] 
+
+                for j in range(len(dataExcel)):
+                    stringFecha = (dataExcel[j][3])
+                    firstMonth1 = (stringFecha[2:5])
+                    firstYear1 = (stringFecha[5:7])
+                    secondMonth1 =(stringFecha[10:13])
+                    secondYear1 =(stringFecha[13:15])
+                    if(uniqueSeries[i] == dataExcel[j][1]):
+                        names_bar_p.append(firstMonth1+firstYear1+'-'+secondMonth1+secondYear1)
+                        dataEnergy[contInterno][0] = dataExcel[j][12]
+                        dataEnergy[contInterno][1] = dataExcel[j][13]
+                        dataEnergy[contInterno][2] = dataExcel[j][14]
+                        contInterno = contInterno +1
+                        
+                #switch array data
+                for j in range(3):
+                    for k in range(cont):
+                        dataEnergyInvert[j][k] = dataEnergy[k][j]
 
                 #create client electricity graphic
                 f1 = plt.figure()
@@ -557,10 +584,6 @@ while True:
                 autolabel(bar_plot2,label_p,ax2)    
                 ax2.set_title(' Grafica de total | Serie: '+ uniqueSeries[i])
                 ax2.tick_params(axis='x', which='major', labelsize=10,rotation = 45)
-
-                
-                
-                
 
             window.extend_layout(window['principal'], informacion(len(uniqueSeries),len(dataExcel)))
             break
@@ -579,6 +602,8 @@ for i in range(18):
         dataConfInvert[i][j] = dataConf[j][i]
 
 #display pytesseract confidence
+
+print(dataConfInvert)
 df = pd.DataFrame(dataConfInvert,columns = columnNames, index=headerConf)
 df.plot.bar()
 plt.title('Pytesseract Confidence')
